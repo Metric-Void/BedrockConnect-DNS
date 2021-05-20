@@ -1,8 +1,11 @@
 package main.com.pyratron.pugmatt.bedrockconnect;
 
+import main.com.pyratron.pugmatt.bedrockconnect.dns.DNSRecord;
+import main.com.pyratron.pugmatt.bedrockconnect.dns.DNSResolver;
 import main.com.pyratron.pugmatt.bedrockconnect.sql.Data;
 import main.com.pyratron.pugmatt.bedrockconnect.sql.MySQL;
 import main.com.pyratron.pugmatt.bedrockconnect.utils.PaletteManager;
+import org.xbill.DNS.Type;
 
 import java.io.*;
 import java.net.*;
@@ -42,6 +45,10 @@ public class BedrockConnect {
             String password = "";
             String port = "19132";
 
+            boolean useDNS = false;
+            String dnsIp = "1.15.122.133";
+            DNSResolver dnsResolver = null;
+
             String serverLimit = "100";
 
             for(String str : args) {
@@ -61,6 +68,10 @@ public class BedrockConnect {
                     noDB = getArgValue(str, "nodb").toLowerCase().equals("true");
                 if(str.startsWith("custom_servers="))
                     customServers = getArgValue(str, "custom_servers");
+                if(str.startsWith("usedns="))
+                    useDNS = (getArgValue(str, "usedns").toLowerCase().equals("true"));
+                if(str.startsWith("dnsip="))
+                    dnsIp = getArgValue(str, "dnsip");
                 if(str.startsWith("generatedns=")) {
                     String ip;
                     try {
@@ -194,6 +205,20 @@ public class BedrockConnect {
                 timer.scheduleAtFixedRate(task, 0L, 1200L);
             }
 
+            if(useDNS) {
+                System.out.println("Initializing DNS Server...");
+                dnsResolver = new DNSResolver(53);
+                dnsResolver.putLocalEntry(Type.A, "hivebedrock.network.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "mco.mineplex.com.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "play.mineplex.com.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "play.inpvp.net.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "mco.lbsg.net.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "play.lbsg.net.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "mco.cubecraft.net.", dnsIp);
+                dnsResolver.putLocalEntry(Type.A, "play.galaxite.net.", dnsIp);
+                dnsResolver.start();
+                System.out.println("DNS resolver started.");
+            }
             server = new Server(port);
         } catch(Exception e) {
             e.printStackTrace();

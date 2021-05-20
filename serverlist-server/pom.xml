@@ -60,6 +60,14 @@
 
     <repositories>
         <repository>
+            <id>central</id>
+            <url>https://repo1.maven.org/maven2/</url>
+        </repository>
+        <repository>
+            <id>sonatype</id>
+            <url>https://oss.sonatype.org/content/repositories/releases/</url>
+        </repository>
+        <repository>
             <id>opencollab-repo</id>
             <url>https://repo.opencollab.dev/snapshot</url>
         </repository>
@@ -152,7 +160,12 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.7.21</version>
         </dependency>
-
+        <!-- https://search.maven.org/artifact/dnsjava/dnsjava/3.3.1/bundle -->
+        <dependency>
+            <groupId>dnsjava</groupId>
+            <artifactId>dnsjava</artifactId>
+            <version>3.3.1</version>
+        </dependency>
 
         <!-- Proxy Stuff -->
 
