@@ -20,9 +20,9 @@ public class UIForms {
     public static JsonArray featuredServerButtons = new JsonArray();
 
     static {
-        mainMenuButtons.add(UIComponents.createButton("Connect to a Server"));
-        mainMenuButtons.add(UIComponents.createButton("Remove a Server"));
-        mainMenuButtons.add(UIComponents.createButton("Exit Server List"));
+        mainMenuButtons.add(UIComponents.createButton("连接到一个服务器"));
+        mainMenuButtons.add(UIComponents.createButton("移除一个服务器"));
+        mainMenuButtons.add(UIComponents.createButton("退出服务器列表"));
 
         featuredServerButtons.add(UIComponents.createButton("The Hive", "https://forum.playhive.com/uploads/default/original/1X/0d05e3240037f7592a0f16b11b57c08eba76f19c.png", "url"));
         featuredServerButtons.add(UIComponents.createButton("Mineplex", "https://www.mineplex.com/assets/www-mp/img/footer/footer_smalllogo.png", "url"));
@@ -37,7 +37,7 @@ public class UIForms {
         ModalFormRequestPacket mf = new ModalFormRequestPacket();
         mf.setFormId(UIForms.MAIN);
 
-        JsonObject out = UIComponents.createForm("form", "Server List");
+        JsonObject out = UIComponents.createForm("form", "服务器列表");
         out.addProperty("content", "");
 
         JsonArray buttons = new JsonArray();
@@ -46,10 +46,10 @@ public class UIForms {
         if(BedrockConnect.userServers)
             buttons.addAll(mainMenuButtons);
         else
-            buttons.add(UIComponents.createButton("Exit Server List"));
+            buttons.add(UIComponents.createButton("退出服务器列表"));
 
         for(int i=0;i<servers.size();i++) {
-            buttons.add(UIComponents.createButton(servers.get(i), "https://i.imgur.com/3BmFZRE.png", "url"));
+            buttons.add(UIComponents.createButton(servers.get(i), "https://i.loli.net/2021/05/20/jumBzIxAXQeFywk.png", "url"));
         }
 
         for (CustomServer cs : customServers) {
@@ -108,13 +108,13 @@ public class UIForms {
         currentForm = DIRECT_CONNECT;
         ModalFormRequestPacket mf = new ModalFormRequestPacket();
         mf.setFormId(UIForms.DIRECT_CONNECT);
-        JsonObject out = UIComponents.createForm("custom_form", "Connect to a Server");
+        JsonObject out = UIComponents.createForm("custom_form", "连接服务器");
 
         JsonArray inputs = new JsonArray();
 
-        inputs.add(UIComponents.createInput("Server Address", "Please enter IP or Address"));
-        inputs.add(UIComponents.createInput("Server Port", "Please enter Port", "19132"));
-        inputs.add(UIComponents.createToggle("Add to server list"));
+        inputs.add(UIComponents.createInput("服务器地址", "请输入服务器地址或IP:"));
+        inputs.add(UIComponents.createInput("服务器端口", "请输入端口:", "19132"));
+        inputs.add(UIComponents.createToggle("添加到服务器列表"));
 
         out.add("content", inputs);
         mf.setFormData(out.toString());
@@ -126,7 +126,7 @@ public class UIForms {
         currentForm = REMOVE_SERVER;
         ModalFormRequestPacket mf = new ModalFormRequestPacket();
         mf.setFormId(UIForms.REMOVE_SERVER);
-        JsonObject out = UIComponents.createForm("custom_form", "Remove Server");
+        JsonObject out = UIComponents.createForm("custom_form", "移除服务器");
 
         JsonArray inputs = new JsonArray();
 

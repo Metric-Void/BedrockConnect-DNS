@@ -58,8 +58,8 @@ public class Server {
         server = new BedrockServer(bindAddress);
         pong = new BedrockPong();
         pong.setEdition("MCPE");
-        pong.setMotd("Join To Open Server List");
-        pong.setSubMotd("BedrockConnect Server List");
+        pong.setMotd("加入以打开服务器列表");
+        pong.setSubMotd("BedrockConnect服务器列表");
         pong.setPlayerCount(0);
         pong.setMaximumPlayerCount(20);
         pong.setGameType("Survival");
@@ -91,7 +91,7 @@ public class Server {
                 public void run() {
                     for (int i = 0; i < players.size(); i++) {
                         if (players.get(i) != null && !players.get(i).isActive())
-                            players.get(i).disconnect("Kicked for inactivity", current);
+                            players.get(i).disconnect("长时间无活动", current);
                     }
                 }
             };
