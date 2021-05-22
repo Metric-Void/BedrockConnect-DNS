@@ -219,8 +219,13 @@ public class DNSResolver {
                 }
             }
 
-            // Send an empty response.
-            Message response = new Message(request.getHeader().getID());
+            // Send a NXDOMAIN response.
+            Header respHeader = new Header();
+            respHeader.setID(request.getHeader().getID());
+            respHeader.setRcode(Rcode.NXDOMAIN);
+            respHeader.setOpcode(Opcode.QUERY);
+            Message response = new Message();
+            response.setHeader(respHeader);
             response.addRecord(requestRecord, Section.QUESTION);
 
             byte[] resp = response.toWire();
@@ -250,7 +255,7 @@ public class DNSResolver {
      * @param domain The string domain, including zone and subdomain. e.g. p5mc.vworks.cc
      * @param record The record, could different depending on the type of record.
      * @param ttl TTL of the record. It will never expire on this server though.
-     * @param dtype The class of this record. DClass.IN or DClass.OUT.
+     * @param dtype The class of this record. DClass.IN, DClass.CHAOS, etc.
      * @return If the operation was successful.
      */
     public boolean putLocalEntry(int type, String domain, String record, int ttl, int dtype) {
