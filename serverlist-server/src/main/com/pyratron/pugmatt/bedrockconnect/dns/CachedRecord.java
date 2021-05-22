@@ -10,6 +10,11 @@ public class CachedRecord {
     public LocalDateTime expireAt;
     private final Record record;
 
+    /**
+     * Construct a cached record from a record.
+     * A cached record contains a expiry time.
+     * @param r The original record.
+     */
     CachedRecord(Record r) {
         record = r;
         this.expireAt = LocalDateTime.now().plusSeconds(r.getTTL());

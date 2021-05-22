@@ -43,9 +43,15 @@ public class BedrockConnect {
             String password = "";
             String port = "19132";
 
-            boolean useDNS = false;
-            String dnsIp = "1.15.122.133";
+            boolean useDNS =
+                System.getenv("BC_DNS_ON") != null && System.getenv("BC_DNS_ON").toLowerCase().equals("true");
+            String dnsIp =
+                System.getenv("BC_DNS_IP") == null ? "104.238.130.180" : System.getenv("BC_DNS_IP");
+            int dnsCacheSize =
+                System.getenv("BC_DNS_CACHE") == null ? 1000 : Integer.parseInt(System.getenv("BC_DNS_CACHE"));
             DNSResolver dnsResolver = null;
+            boolean dnsRecurse =
+                System.getenv("BC_DNS_RECURSE") != null && System.getenv("BC_DNS_RECURSE").toLowerCase().equals("true");
 
             String serverLimit = "100";
 
@@ -66,10 +72,14 @@ public class BedrockConnect {
                     noDB = getArgValue(str, "nodb").toLowerCase().equals("true");
                 if(str.startsWith("custom_servers="))
                     customServers = getArgValue(str, "custom_servers");
-                if(str.startsWith("usedns="))
-                    useDNS = (getArgValue(str, "usedns").toLowerCase().equals("true"));
-                if(str.startsWith("dnsip="))
-                    dnsIp = getArgValue(str, "dnsip");
+                if(str.startsWith("dns-on="))
+                    useDNS = (getArgValue(str, "dns-on").toLowerCase().equals("true"));
+                if(str.startsWith("dns-ip="))
+                    dnsIp = getArgValue(str, "dns-ip");
+                if(str.startsWith("dns-recursive"))
+                    dnsRecurse = (getArgValue(str, "dns-recursive")).toLowerCase().equals("true");
+                if(str.startsWith("dns-cache"))
+                    dnsCacheSize = Integer.parseInt(getArgValue(str, "dns-cache"));
                 if(str.startsWith("generatedns=")) {
                     String ip;
                     try {
@@ -205,15 +215,28 @@ public class BedrockConnect {
 
             if(useDNS) {
                 System.out.println("Initializing DNS Server...");
-                dnsResolver = new DNSResolver(53);
+                dnsResolver = new DNSResolver(53, dnsCacheSize);
+                dnsResolver.setRecursive(dnsRecurse);
+                dnsResolver.putLocalEntry(Type.NS, "ns.hivebedrock.network.", "ns.hivebedrock.network.");
                 dnsResolver.putLocalEntry(Type.A, "hivebedrock.network.", dnsIp);
+
+                dnsResolver.putLocalEntry(Type.NS, "ns.mineplex.com.", "ns.mineplex.com.");
                 dnsResolver.putLocalEntry(Type.A, "mco.mineplex.com.", dnsIp);
                 dnsResolver.putLocalEntry(Type.A, "play.mineplex.com.", dnsIp);
+
+                dnsResolver.putLocalEntry(Type.NS, "ns.inpvp.net.", "ns.inpvp.net.");
                 dnsResolver.putLocalEntry(Type.A, "play.inpvp.net.", dnsIp);
+
+                dnsResolver.putLocalEntry(Type.NS, "ns.lbsg.net.", "ns.lbsg.net.");
                 dnsResolver.putLocalEntry(Type.A, "mco.lbsg.net.", dnsIp);
                 dnsResolver.putLocalEntry(Type.A, "play.lbsg.net.", dnsIp);
+
+                dnsResolver.putLocalEntry(Type.NS, "ns.cubecraft.net.", "ns.cubecraft.net.");
                 dnsResolver.putLocalEntry(Type.A, "mco.cubecraft.net.", dnsIp);
+
+                dnsResolver.putLocalEntry(Type.NS, "ns.galaxite.net.", "ns.galaxite.net.");
                 dnsResolver.putLocalEntry(Type.A, "play.galaxite.net.", dnsIp);
+
                 dnsResolver.start();
                 System.out.println("DNS resolver started.");
             }

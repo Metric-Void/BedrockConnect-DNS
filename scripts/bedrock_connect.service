@@ -8,8 +8,8 @@ After=network.target
 [Service]
 RestartSec=2s
 Type=simple
-User=mcbc
-Group=mcbc
+User=root
+Group=root
 WorkingDirectory=/home/mcbc
 ExecStart=/usr/bin/java -jar BedrockConnect-1.0-SNAPSHOT.jar nodb=true
 Restart=always

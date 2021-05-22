@@ -20,20 +20,50 @@ public class DNSResolver {
     private Thread thread = null;
     private volatile boolean isLive = false;
     private final int port;
-
+    private final int cache_size;
+    /**
+     * Whether or not to perform recusive queries.
+     * If false, server will return empty response to all non-local records.
+     */
     private boolean recursive = true;
-    private ArrayList<InetAddress> recursiveServers;
 
+    /**
+     * Locally stored DNS entries. Has priority.
+     */
     private final Map<DNSKey, Record> localEntries = new HashMap<>();
+    /**
+     * Cached DNS entries.
+     */
     private final Map<DNSKey, List<CachedRecord>> cachedEntries = new HashMap<>();
+    /**
+     * A queue tracking the time each entry is cached.
+     * Old entries are removed when limit is exceeded.
+     */
     private final Deque<DNSKey> cacheList = new LinkedList<DNSKey>();
 
+    /**
+     * A internal cache for the lookup process to use.
+     */
     private final Cache dnsCache = new Cache();
 
+    /**
+     * Construct a DNS server to listen on <code>port</code>
+     * @param port The port to listen on
+     */
     public DNSResolver(int port) {
-        this.port = port;
+        this(port, 1000);
     }
 
+    public DNSResolver(int port, int cache_size) {
+        this.port = port;
+        this.cache_size = cache_size;
+    }
+    /**
+     * Fetch a non-local record from Internet. Use system DNS servers and resolvers.
+     * Will use cache if possible
+     * @param key The entry to look up for
+     * @return A list of completed DNS records.
+     */
     private List<Record> recurse(DNSKey key) {
         if(cachedEntries.containsKey(key)) {
             for(CachedRecord r : cachedEntries.get(key)) {
@@ -45,6 +75,12 @@ public class DNSResolver {
         }
     }
 
+    /**
+     * Fetch a non-local record from Internet. Use system DNS server and resolvers.
+     * Will NOT use cache.
+     * @param key The entry to look up for.
+     * @return A list of completed DNS records.
+     */
     private List<Record> hardRecurse(DNSKey key) {
         Lookup lookup = new Lookup(key.name, key.type);
         lookup.setCache(dnsCache);
@@ -58,11 +94,16 @@ public class DNSResolver {
         return Arrays.asList(lookup.getAnswers());
     }
 
+    /**
+     * Cache the result of a DNS lookup.
+     * Should be done async.
+     * @param key The DNS entry.
+     * @param result A list of completed DNS records.
+     */
     private void cacheResult(DNSKey key, Record[] result) {
         cacheList.remove(key);
 
-        int MAX_CACHE_ENTRIES = 1000;
-        if(cacheList.size() >= MAX_CACHE_ENTRIES) {
+        if(cacheList.size() >= cache_size) {
             DNSKey keyToRemove = cacheList.removeFirst();
             cacheList.remove(keyToRemove);
             cachedEntries.remove(keyToRemove);
@@ -75,6 +116,9 @@ public class DNSResolver {
         }
     }
 
+    /**
+     * Start the DNS server.
+     */
     public void start() {
         isLive = true;
         thread = new Thread(()->{
@@ -95,21 +139,32 @@ public class DNSResolver {
         thread.start();
     }
 
+    /**
+     * Stop the DNS server
+     */
     public void stop() {
         isLive = false;
         thread.interrupt();
         thread = null;
     }
 
+    /**
+     * Restart the DNS server
+     */
     private void restart() {
         thread.interrupt();
         thread = null;
         start();
     }
 
+    /**
+     * Listen to the UDP socket, and send packets to handler.
+     * @throws IOException When the UDP socket generates an error. i.e. Cannot bind to port.
+     */
     private void serve() throws IOException {
         DatagramSocket socket = new DatagramSocket(port);
-        System.out.printf("DNS Server started: 0.0.0.0:%d\n", port);
+        System.out.printf("DNS Server started: 0.0.0.0:%d%n", port);
+        System.out.printf("DNS Settings: [Recursive=%s, Cache Size=%d] %n", recursive, cache_size);
         while(isLive) {
             int UDP_SIZE = 512;
             byte[] inBuffer = new byte[UDP_SIZE];
@@ -120,6 +175,11 @@ public class DNSResolver {
         }
     }
 
+    /**
+     * Handle a UDP packet of DNS request, and send it via a socket
+     * @param reqPacket The incoming DNS request packet.
+     * @param socket The socket to send response to.
+     */
     private void handle(DatagramPacket reqPacket, DatagramSocket socket) {
         try {
             Message request = new Message(reqPacket.getData());
@@ -169,13 +229,30 @@ public class DNSResolver {
             socket.send(resPacket);
         } catch (IOException ex) {
             System.out.println("An IO Exception happened in DNS resolver.");
+            ex.printStackTrace();
         }
     }
 
+    /**
+     * Add a local entry with reduced parameters. Default TTL is 86400s, and dtype is DClass.IN.
+     * @param type The type of record. e.g. Type.A
+     * @param domain The string domain, including zone and subdomain. e.g. p5mc.vworks.cc
+     * @param record The record, could different depending on the type of record.
+     * @return If the operation was successful.
+     */
     public boolean putLocalEntry(int type, String domain, String record) {
         return putLocalEntry(type, domain, record, 86400, DClass.IN);
     }
 
+    /**
+     * Add a local entry.
+     * @param type The type of record. e.g. Type.A
+     * @param domain The string domain, including zone and subdomain. e.g. p5mc.vworks.cc
+     * @param record The record, could different depending on the type of record.
+     * @param ttl TTL of the record. It will never expire on this server though.
+     * @param dtype The class of this record. DClass.IN or DClass.OUT.
+     * @return If the operation was successful.
+     */
     public boolean putLocalEntry(int type, String domain, String record, int ttl, int dtype) {
         try {
             Name domain_name = new Name(domain);
@@ -189,6 +266,10 @@ public class DNSResolver {
         return true;
     }
 
+    /**
+     * Control whether recursive lookups shall be performed.
+     * @param recursive True or False.
+     */
     public void setRecursive(boolean recursive) {
         this.recursive = recursive;
     }
