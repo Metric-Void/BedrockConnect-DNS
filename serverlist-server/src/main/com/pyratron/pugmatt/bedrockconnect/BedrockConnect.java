@@ -1,6 +1,5 @@
 package main.com.pyratron.pugmatt.bedrockconnect;
 
-import main.com.pyratron.pugmatt.bedrockconnect.dns.DNSRecord;
 import main.com.pyratron.pugmatt.bedrockconnect.dns.DNSResolver;
 import main.com.pyratron.pugmatt.bedrockconnect.sql.Data;
 import main.com.pyratron.pugmatt.bedrockconnect.sql.MySQL;
@@ -9,7 +8,6 @@ import org.xbill.DNS.Type;
 
 import java.io.*;
 import java.net.*;
-import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;

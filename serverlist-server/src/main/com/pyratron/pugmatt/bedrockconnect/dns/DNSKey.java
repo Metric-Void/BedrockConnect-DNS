@@ -1,15 +1,16 @@
 package main.com.pyratron.pugmatt.bedrockconnect.dns;
 
 import org.xbill.DNS.Name;
-
 import java.util.Objects;
 
+/**
+ * The Key of A DNS query. Includes name and type.
+ */
 public class DNSKey {
     public int type; // A, NS, AAAA, TXT, etc.
     public Name name; // The record.
 
     DNSKey() {
-
     }
 
     DNSKey(int type, Name rec) {

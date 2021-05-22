@@ -10,6 +10,12 @@ import java.net.InetAddress;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of A DNS server.
+ *
+ * Treat local records with a higher priority. Perform recursive queries on unknown domains.
+ *
+ */
 public class DNSResolver {
     private Thread thread = null;
     private volatile boolean isLive = false;
@@ -76,7 +82,13 @@ public class DNSResolver {
                serve();
            }
            catch(IOException e) {
-               System.out.println("DNS Resolver generated an error. Restarting...");
+               System.out.println("DNS Resolver generated an error. Restarting in 5s...");
+               e.printStackTrace();
+               try {
+                   Thread.sleep(5000);
+               } catch (InterruptedException interruptedException) {
+                   interruptedException.printStackTrace();
+               }
                restart();
            }
         });
@@ -113,6 +125,8 @@ public class DNSResolver {
             Message request = new Message(reqPacket.getData());
             Record requestRecord = request.getQuestion();
             DNSKey currKey = new DNSKey(requestRecord.getType(), requestRecord.getName());
+
+            System.out.printf("Received DNS request for %s, Type %d\n",currKey.name, currKey.type);
 
             if(currKey.name.toString().endsWith(".lan.")) {
                 String modifiedName = currKey.name.toString();
