@@ -8,6 +8,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -85,13 +86,24 @@ public class DNSResolver {
         Lookup lookup = new Lookup(key.name, key.type);
         lookup.setCache(dnsCache);
         lookup.run();
-
-        if(lookup.getResult() != Lookup.SUCCESSFUL) {
-            return null;
-        } else {
-            new Thread(() -> cacheResult(key, lookup.getAnswers())).start();
+        LinkedList<Record> result = new LinkedList<>();
+        if(lookup.getResult() == Lookup.SUCCESSFUL) {
+            result.addAll(Arrays.asList(lookup.getAnswers()));
         }
-        return Arrays.asList(lookup.getAnswers());
+
+        if(lookup.getAliases().length != 0)
+            result.addAll(
+                Arrays.stream(lookup.getAliases()).parallel()
+                    .map((name) -> {
+                        Lookup lkup = new Lookup(name, Type.CNAME);
+                        lkup.run();
+                        return lkup.getAnswers();
+                    }).flatMap(Arrays::stream)
+                    .collect(Collectors.toList())
+            );
+
+        new Thread(() -> cacheResult(key, result)).start();
+        return result;
     }
 
     /**
@@ -100,7 +112,7 @@ public class DNSResolver {
      * @param key The DNS entry.
      * @param result A list of completed DNS records.
      */
-    private void cacheResult(DNSKey key, Record[] result) {
+    private void cacheResult(DNSKey key, List<Record> result) {
         cacheList.remove(key);
 
         if(cacheList.size() >= cache_size) {
@@ -188,16 +200,14 @@ public class DNSResolver {
 
             System.out.printf("Received DNS request for %s, Type %d\n",currKey.name, currKey.type);
 
-            if(currKey.name.toString().endsWith(".lan.")) {
-                String modifiedName = currKey.name.toString();
-                modifiedName = modifiedName.substring(0, modifiedName.length() - 4);
-                currKey.name = Name.fromString(modifiedName);
-            }
+//            if(currKey.name.toString().endsWith(".lan.")) {
+//                String modifiedName = currKey.name.toString();
+//                modifiedName = modifiedName.substring(0, modifiedName.length() - 4);
+//                currKey.name = Name.fromString(modifiedName);
+//            }
 
             if(localEntries.containsKey(currKey)) {
-                Message response = new Message(request.getHeader().getID());
-                response.addRecord(requestRecord, Section.QUESTION);
-                response.addRecord(localEntries.get(currKey), Section.ANSWER);
+                Message response = constructResponse(request, Collections.singletonList(localEntries.get(currKey)));
 
                 byte[] resp = response.toWire();
                 DatagramPacket resPacket =
@@ -206,11 +216,7 @@ public class DNSResolver {
             } else if (recursive) {
                 List<Record> answers = recurse(currKey);
                 if(answers != null) {
-                    Message response = new Message(request.getHeader().getID());
-                    response.addRecord(requestRecord, Section.QUESTION);
-                    for(Record r : answers) {
-                        response.addRecord(r, Section.ANSWER);
-                    }
+                    Message response = constructResponse(request, answers);
                     byte[] resp = response.toWire();
                     DatagramPacket resPacket =
                         new DatagramPacket(resp, resp.length, reqPacket.getAddress(), reqPacket.getPort());
@@ -220,14 +226,7 @@ public class DNSResolver {
             }
 
             // Send a NXDOMAIN response.
-            Header respHeader = new Header();
-            respHeader.setID(request.getHeader().getID());
-            respHeader.setRcode(Rcode.NXDOMAIN);
-            respHeader.setOpcode(Opcode.QUERY);
-            Message response = new Message();
-            response.setHeader(respHeader);
-            response.addRecord(requestRecord, Section.QUESTION);
-
+            Message response = constructNXDomainResponse(request);
             byte[] resp = response.toWire();
             DatagramPacket resPacket =
                 new DatagramPacket(resp, resp.length, reqPacket.getAddress(), reqPacket.getPort());
@@ -267,6 +266,7 @@ public class DNSResolver {
         } catch (IOException e) {
             e.printStackTrace();
             return false;
+
         }
         return true;
     }
@@ -277,5 +277,41 @@ public class DNSResolver {
      */
     public void setRecursive(boolean recursive) {
         this.recursive = recursive;
+    }
+
+    /**
+     * Generate a NXDOMAIN Response.
+     * @return
+     */
+    public Message constructNXDomainResponse(Message request) {
+        Header respHeader = new Header();
+        respHeader.setFlag(Flags.QR);
+        if(recursive) respHeader.setFlag(Flags.RA);
+        if(request.getHeader().getFlag(Flags.RD)) respHeader.setFlag(Flags.RD);
+        respHeader.setID(request.getHeader().getID());
+        respHeader.setRcode(Rcode.NXDOMAIN);
+        respHeader.setOpcode(Opcode.QUERY);
+
+        Message response = new Message();
+        response.setHeader(respHeader);
+        response.addRecord(request.getQuestion(), Section.QUESTION);
+
+        return response;
+    }
+
+    public Message constructResponse(Message request, List<Record> records) {
+        Header respHeader = new Header();
+        respHeader.setFlag(Flags.QR);
+        if(recursive) respHeader.setFlag(Flags.RA);
+        if(request.getHeader().getFlag(Flags.RD)) respHeader.setFlag(Flags.RD);
+        respHeader.setID(request.getHeader().getID());
+        respHeader.setRcode(Rcode.NOERROR);
+
+        Message response = new Message();
+        response.setHeader(respHeader);
+        response.addRecord(request.getQuestion(), Section.QUESTION);
+        for(Record r : records) response.addRecord(r, Section.ANSWER);
+
+        return response;
     }
 }
